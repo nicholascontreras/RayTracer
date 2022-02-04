@@ -4,6 +4,7 @@
 #include "CameraPixel.h"
 #include "Ray.h"
 #include "IntersectionInfo.h"
+#include "MathUtils.h"
 
 #include <iostream>
 #include <vector>

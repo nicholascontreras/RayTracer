@@ -43,13 +43,12 @@ bool Camera::rayEntersCamera(Ray ray, IntersectionInfo& intersectionInfo) {
 	}
 
 	// Ensure the ray is entering through the front of the camera
-	double pi = 3.14159265358979323846;
-	if (direction.angleBetween(ray.getDirection()) < pi / 2) {
+	if (direction.angleBetween(ray.getDirection()) < PI / 2) {
 		return false;
 	}
 
 	// Enforce 90 degree FOV
-	if (ray.getDirection().angleBetween(direction.scale(-1)) > pi / 4) {
+	if (ray.getDirection().angleBetween(direction.scale(-1)) > PI / 4) {
 		return false;
 	}
 
