@@ -16,27 +16,16 @@ private:
 	Vector3D up;
 	unsigned int lensWidth, lensHeight;
 	unsigned int pixelsPerUnit;
+	unsigned int blurringRadius;
 
 	CameraPixel* cameraPixels;
 
 	bool mapPointToPixel(Vector3D intersectionLocation, int& pixelX, int& pixelY);
+	Color* applyBlur(Color image[]);
 
 public:
-	Camera(unsigned short lensWidth, unsigned short lensHeight, unsigned short pixelsPerUnit) : position(Vector3D(0, 0, 0)), direction(Vector3D(0, 0, 1).normalize()), up(Vector3D(0, 1, 0).normalize()), lensWidth(lensWidth), lensHeight(lensHeight), pixelsPerUnit(pixelsPerUnit) {
-		if (!direction.isNormal()) {
-			throw std::invalid_argument("Direction vector must be normal!");
-		}
-		else if (!up.isNormal()) {
-			throw std::invalid_argument("Up vector must be normal!");
-		}
-		
-		int numPixels = lensWidth * pixelsPerUnit * lensHeight * pixelsPerUnit;
-		cameraPixels = new CameraPixel[numPixels];
-	}
-
-	~Camera() {
-		delete[] cameraPixels;
-	}
+	Camera(unsigned short lensWidth, unsigned short lensHeight, unsigned short pixelsPerUnit, unsigned short blurringRadius);
+	~Camera();
 
 	unsigned int getLensWidth();
 	unsigned int getLensHeight();

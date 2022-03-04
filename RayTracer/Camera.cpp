@@ -5,6 +5,30 @@
 #include <algorithm>
 #include <stdexcept>
 
+Camera::Camera(unsigned short lensWidth, unsigned short lensHeight, unsigned short pixelsPerUnit, unsigned short blurringRadius) : 
+	position(Vector3D(0, 0, 0)), 
+	direction(Vector3D(0, 0, 1).normalize()), 
+	up(Vector3D(0, 1, 0).normalize()), 
+	lensWidth(lensWidth), 
+	lensHeight(lensHeight), 
+	pixelsPerUnit(pixelsPerUnit), 
+	blurringRadius(blurringRadius) {
+
+	if (!direction.isNormal()) {
+		throw std::invalid_argument("Direction vector must be normal!");
+	}
+	else if (!up.isNormal()) {
+		throw std::invalid_argument("Up vector must be normal!");
+	}
+
+	int numPixels = lensWidth * pixelsPerUnit * lensHeight * pixelsPerUnit;
+	cameraPixels = new CameraPixel[numPixels];
+}
+
+Camera::~Camera() {
+	delete[] cameraPixels;
+}
+
 unsigned int Camera::getLensWidth() {
 	return lensWidth;
 }
@@ -27,11 +51,11 @@ bool Camera::mapPointToPixel(Vector3D intersectionLocation, int& pixelX, int& pi
 	double projectedX = (intersectionLocation - position).dotProduct(cameraPlaneXAxis);
 	double projectedY = (intersectionLocation - position).dotProduct(direction.crossProduct(cameraPlaneXAxis));
 
-	pixelX = round(projectedX * pixelsPerUnit) + (lensWidth * pixelsPerUnit / 2);
-	pixelY = round(projectedY * pixelsPerUnit) + (lensHeight * pixelsPerUnit / 2);;
+	pixelX = (int) round(projectedX * pixelsPerUnit) + (lensWidth * pixelsPerUnit / 2);
+	pixelY = (int) round(projectedY * pixelsPerUnit) + (lensHeight * pixelsPerUnit / 2);
 
 	// Return whether or not the intersection location is actually on the camera lens
-	return pixelX >= 0 && pixelX < lensWidth * pixelsPerUnit && pixelY >= 0 && pixelY < lensHeight * pixelsPerUnit;
+	return pixelX >= 0 && pixelX < (int) (lensWidth * pixelsPerUnit) && pixelY >= 0 && pixelY < (int) (lensHeight * pixelsPerUnit);
 }
 
 bool Camera::rayEntersCamera(Ray ray, IntersectionInfo& intersectionInfo) {
@@ -85,19 +109,63 @@ void Camera::recordRayHit(Vector3D location, Color color) {
 
 Color* Camera::getRenderedImage() {
 	unsigned int maxNumRaysReceived = 0;
-	for (int i = 0; i < getTotalNumPixels(); i++) {
+	for (unsigned int i = 0; i < getTotalNumPixels(); i++) {
 		maxNumRaysReceived = std::max(maxNumRaysReceived, cameraPixels[i].getNumRaysReceived());
 	}
 
 	double brightnessScalingFactor = 1.0 / maxNumRaysReceived;
 
-	Color* image = new Color[getTotalNumPixels()];
-	for (int i = 0; i < getTotalNumPixels(); i++) {
+	unsigned int totalNumPixels = getTotalNumPixels();
+	Color* image = new Color[totalNumPixels];
+	for (unsigned int i = 0; i < totalNumPixels; i++) {
 		Color brightnessScaledColor = cameraPixels[i].getAverageColor();
 		brightnessScaledColor = brightnessScaledColor.scale(brightnessScalingFactor);
 		brightnessScaledColor = brightnessScaledColor.scale(cameraPixels[i].getNumRaysReceived());
 		image[i] = brightnessScaledColor;
 	}
 
+	// Apply blurring if it's been enabled
+	if (blurringRadius) {
+		std::cout << "Applying box blur..." << std::endl;
+		Color* blurredImage = applyBlur(image);
+		delete[] image;
+		image = blurredImage;
+		std::cout << "Box blur complete" << std::endl;
+	}
+
 	return image;
+}
+
+Color* Camera::applyBlur(Color image[]) {
+
+	Color* blurredImage = new Color[getTotalNumPixels()];
+
+	unsigned int numPixelsVert = lensHeight * pixelsPerUnit;
+	unsigned int numPixelsHorz = lensWidth * pixelsPerUnit;
+
+	for (unsigned int row = 0; row < numPixelsVert; row++) {
+		for (unsigned int col = 0; col < numPixelsHorz; col++) {
+			unsigned int index = (row * numPixelsHorz) + col;
+			double totalR = 0, totalG = 0, totalB = 0;
+			unsigned short numSamples = 0;
+
+			for (unsigned int sampleRow = row - blurringRadius; sampleRow <= row + blurringRadius; sampleRow++) {
+				for (unsigned int sampleCol = col - blurringRadius; sampleCol <= col + blurringRadius; sampleCol++) {
+					if (sampleRow >= 0 && sampleRow < numPixelsVert) {
+						if (sampleCol >= 0 && sampleCol < numPixelsHorz) {
+							int sampleIndex = (sampleRow * numPixelsHorz) + sampleCol;
+							totalR += image[sampleIndex].getRed();
+							totalG += image[sampleIndex].getGreen();
+							totalB += image[sampleIndex].getBlue();
+							numSamples++;
+						}
+					}
+				}
+			}
+
+			blurredImage[index] = Color(totalR / numSamples, totalG / numSamples, totalB / numSamples);
+		}
+	}
+
+	return blurredImage;
 }

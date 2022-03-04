@@ -11,21 +11,23 @@
 #include "World.h"
 
 int main(int argc, char* args[]) {
-    srand(time(NULL));
+    srand(time(nullptr));
 
 	Vector3D::tests();
 
-	Camera* camera = new Camera(50, 30, 10);
-	LightSource* lightSource = new LightSource(Vector3D(0, 0, 1), Color(1, 1, 1));
+	Camera* camera = new Camera(50, 30, 10, 2);
+	LightSource* lightSource = new LightSource(Vector3D(0/*15*/, 0, 1), Color(1, 1, 1));
 
 	Sphere sphere0 = Sphere(Vector3D(0, 0, 10), 5, Color(1, 0, 0));
     std::vector<Sphere> spheres = { sphere0 };
 
 	World world = World(camera, lightSource, spheres);
 
+    std::cout << "World setup complete, casting rays..." << std::endl;
     for (int i = 0; i < 10000000; i++) {
         world.castRay();
     }
+    std::cout << "Raycasting complete" << std::endl;
 
     int windowWidth = camera->getLensWidth() * camera->getPixelsPerUnit();
     int windowHeight = camera->getLensHeight() * camera->getPixelsPerUnit();
@@ -57,9 +59,9 @@ int main(int argc, char* args[]) {
             Color curPixelColor = imageArray[arrayIndex];
 
             SDL_SetRenderDrawColor(renderer, 
-                curPixelColor.getRedAsInt(), 
-                curPixelColor.getGreenAsInt(), 
-                curPixelColor.getBlueAsInt(), 
+                (Uint8) curPixelColor.getRedAsInt(), 
+                (Uint8) curPixelColor.getGreenAsInt(),
+                (Uint8) curPixelColor.getBlueAsInt(),
                 SDL_ALPHA_OPAQUE);
 
             SDL_RenderDrawPoint(renderer, x, y);
